@@ -1,0 +1,1827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sword Throw - 2 Player Duel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #1B3244;
+            font-family: 'Fredoka', sans-serif;
+            touch-action: none;
+        }
+        #app-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at center, #2B4C65 0%, #162938 100%);
+        }
+        /* Portrait Arena Container */
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            max-width: 500px;
+            background-color: #2B4C65;
+            overflow: hidden;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.65);
+        }
+        @media (min-width: 520px) {
+            #game-container {
+                height: 94vh;
+                max-height: 920px;
+                border-radius: 32px;
+                border: 5px solid #0f1e29;
+            }
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Left Score Semi-Circle Pill (Matches reference image) */
+        .side-pill-left {
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 48px;
+            height: 104px;
+            background: #FFFFFF;
+            border-radius: 0 60px 60px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 3px 0 12px rgba(0,0,0,0.28);
+            z-index: 20;
+            pointer-events: none;
+        }
+        .score-vertical {
+            transform: rotate(-90deg);
+            white-space: nowrap;
+            font-size: 1.45rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Right Exit Semi-Circle Pill (Matches reference image) */
+        .side-pill-right {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 48px;
+            height: 104px;
+            background: #FFFFFF;
+            border-radius: 60px 0 0 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: -3px 0 12px rgba(0,0,0,0.28);
+            z-index: 20;
+            cursor: pointer;
+            transition: transform 0.15s ease, background-color 0.15s ease;
+            border: none;
+            outline: none;
+        }
+        .side-pill-right:hover {
+            background: #f1f5f9;
+        }
+        .side-pill-right:active {
+            transform: translateY(-50%) scale(0.93);
+        }
+        .exit-vertical {
+            transform: rotate(-90deg);
+            white-space: nowrap;
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: #525E66;
+            letter-spacing: 1.5px;
+        }
+
+        /* Subtle Button Effects */
+        .cartoon-btn {
+            border: 3.5px solid #000000;
+            box-shadow: 0 5px 0 #000000;
+            transition: all 0.1s ease;
+        }
+        .cartoon-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 1px 0 #000000;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app-wrapper">
+    <div id="game-container">
+        <!-- Main Interactive Canvas -->
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- Left Score Pill (Exact Reference Match) -->
+        <div class="side-pill-left">
+            <div class="score-vertical">
+                <span id="redScoreText" style="color: #EB5353;">2</span>
+                <span style="color: #3A4750; font-size: 1.1rem;">•</span>
+                <span id="blueScoreText" style="color: #19A7CE;">3</span>
+            </div>
+        </div>
+
+        <!-- Right Exit Pill (Exact Reference Match) -->
+        <button id="exitPillBtn" class="side-pill-right" title="Game Menu & Modes">
+            <span class="exit-vertical">EXIT</span>
+        </button>
+
+        <!-- Sound Mute Quick Button -->
+        <button id="soundToggleBtn" class="absolute top-3 left-3 z-20 w-9 h-9 rounded-full bg-black/25 hover:bg-black/40 text-white/80 flex items-center justify-center transition active:scale-90" title="Toggle Sound">
+            <svg id="soundOnIcon" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+            </svg>
+            <svg id="soundOffIcon" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+            </svg>
+        </button>
+
+        <!-- Quick Sword Skin Switcher Button -->
+        <button id="quickSkinBtn" class="absolute top-3 left-14 z-20 h-9 px-3 rounded-full bg-black/30 hover:bg-black/50 border-2 border-white/20 text-white flex items-center gap-1.5 transition active:scale-95 shadow-md" title="Cycle Sword Design">
+            <span class="text-sm">⚔️</span>
+            <span id="quickSkinLabel" class="text-[11px] font-extrabold tracking-wider uppercase text-[#FFF394]">ROYAL</span>
+        </button>
+
+        <!-- Control Prompts Banner (fades nicely after first throws) -->
+        <div id="topHint" class="
+            position-absolute top-14 left-1/2 -translate-x-1/2 pointer-events-none z-10
+            px-3 py-1 rounded-full bg-black/25 text-[#8BE8FF] text-xs font-bold tracking-wider uppercase
+            transition-opacity duration-500 whitespace-nowrap" style="position:absolute;">
+            BLUE: TAP TOP HALF • [DOWN / W]
+        </div>
+
+        <div id="bottomHint" class="
+            position-absolute bottom-14 left-1/2 -translate-x-1/2 pointer-events-none z-10
+            px-3 py-1 rounded-full bg-black/25 text-[#FF9E9E] text-xs font-bold tracking-wider uppercase
+            transition-opacity duration-500 whitespace-nowrap" style="position:absolute;">
+            RED: TAP BOTTOM HALF • [SPACE / UP]
+        </div>
+
+        <!-- Round Banner Overlay -->
+        <div id="roundToast" class="absolute inset-x-0 top-1/2 -translate-y-1/2 pointer-events-none z-30 flex flex-col items-center justify-center opacity-0 scale-75 transition-all duration-200">
+            <div id="roundToastBox" class="px-6 py-3 rounded-2xl border-4 border-black shadow-[0_6px_0_#000] text-center bg-white">
+                <div id="roundToastTitle" class="text-2xl font-extrabold uppercase tracking-wide text-slate-900">RED SCORES!</div>
+                <div id="roundToastSub" class="text-xs font-bold text-slate-600 uppercase tracking-wider mt-0.5">Next round starting...</div>
+            </div>
+        </div>
+
+        <!-- Mode & Pause Menu Modal -->
+        <div id="menuModal" class="absolute inset-0 z-40 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-5 hidden">
+            <div class="w-full max-w-sm bg-[#2B4C65] border-4 border-black rounded-3xl p-5 shadow-[0_12px_0_#000] text-white flex flex-col gap-3.5 max-h-[92vh] overflow-y-auto">
+                <div class="text-center">
+                    <div class="inline-block px-3 py-0.5 bg-[#FFF394] text-black border-2 border-black rounded-full text-xs font-extrabold tracking-widest uppercase mb-1">
+                        2 PLAYER GAMES
+                    </div>
+                    <h1 class="text-3xl font-extrabold tracking-wide text-white drop-shadow-[0_3px_0_#000]">SWORD THROW</h1>
+                    <p class="text-xs text-slate-200 mt-0.5">Stick all 7 swords into the spinning timber first!</p>
+                </div>
+
+                <!-- Custom Sword Skin Selector -->
+                <div class="bg-black/25 p-3 rounded-2xl border-2 border-black/40">
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-xs font-extrabold uppercase tracking-wider text-[#FFF394]">⚔️ Weapon Forge</label>
+                        <span id="menuSkinName" class="text-xs font-extrabold uppercase tracking-wider text-cyan-300">Royal Broadsword</span>
+                    </div>
+                    <div class="flex items-center justify-center bg-black/30 rounded-xl py-2 mb-2.5 border border-white/10">
+                        <canvas id="skinPreviewCanvas" width="220" height="64" class="w-[220px] h-[64px]"></canvas>
+                    </div>
+                    <div id="skinGrid" class="grid grid-cols-5 gap-1.5">
+                        <button data-skin="0" class="skin-select-btn cartoon-btn py-1.5 rounded-xl font-extrabold text-[10px] bg-[#FFF394] text-black">ROYAL</button>
+                        <button data-skin="1" class="skin-select-btn cartoon-btn py-1.5 rounded-xl font-extrabold text-[10px] bg-slate-700 text-slate-200">KUNAI</button>
+                        <button data-skin="2" class="skin-select-btn cartoon-btn py-1.5 rounded-xl font-extrabold text-[10px] bg-slate-700 text-slate-200">CYBER</button>
+                        <button data-skin="3" class="skin-select-btn cartoon-btn py-1.5 rounded-xl font-extrabold text-[10px] bg-slate-700 text-slate-200">VIKING</button>
+                        <button data-skin="4" class="skin-select-btn cartoon-btn py-1.5 rounded-xl font-extrabold text-[10px] bg-slate-700 text-slate-200">BOWIE</button>
+                    </div>
+                </div>
+
+                <!-- Opponent Selection -->
+                <div class="bg-black/25 p-3 rounded-2xl border-2 border-black/40">
+                    <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-300 mb-2 text-center">Select Players</label>
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <button id="mode2PBtn" class="cartoon-btn py-2.5 px-3 rounded-xl font-extrabold text-sm bg-[#19A7CE] text-white">
+                            2 PLAYERS
+                        </button>
+                        <button id="modeAIBtn" class="cartoon-btn py-2.5 px-3 rounded-xl font-extrabold text-sm bg-slate-700 text-slate-200">
+                            VS SMART BOT
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Clash Rule Selection -->
+                <div class="bg-black/25 p-3 rounded-2xl border-2 border-black/40">
+                    <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-300 mb-2 text-center">Blade Collision Rule</label>
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <button id="ruleBounceBtn" class="cartoon-btn py-2 px-2 rounded-xl font-extrabold text-xs bg-[#4CD964] text-black">
+                            RACE TO 7 (BOUNCE)
+                        </button>
+                        <button id="ruleSuddenBtn" class="cartoon-btn py-2 px-2 rounded-xl font-extrabold text-xs bg-slate-700 text-slate-200">
+                            SUDDEN DEATH
+                        </button>
+                    </div>
+                    <p id="ruleDesc" class="text-[11px] text-center text-slate-300 mt-2 leading-tight">
+                        Clashing a blade bounces off with a brief reload delay. First to stick 7 wins!
+                    </p>
+                </div>
+
+                <!-- Controls Info Card -->
+                <div class="bg-black/20 rounded-xl p-3 text-xs space-y-1.5 border border-white/10">
+                    <div class="flex justify-between items-center">
+                        <span class="font-bold text-[#6CE5FF]">BLUE (TOP):</span>
+                        <span class="text-slate-200">Tap Top / Down Arrow / W</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="font-bold text-[#FF8585]">RED (BOTTOM):</span>
+                        <span class="text-slate-200">Tap Bottom / Space / Up Arrow</span>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex gap-3 pt-1">
+                    <button id="resetMatchBtn" class="cartoon-btn flex-1 py-3 rounded-2xl bg-[#EB5353] text-white font-extrabold text-base tracking-wide">
+                        NEW MATCH (0•0)
+                    </button>
+                    <button id="resumeBtn" class="cartoon-btn flex-1 py-3 rounded-2xl bg-[#FFF394] text-black font-extrabold text-base tracking-wide">
+                        PLAY NOW
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(() => {
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // UI Elements
+    const redScoreText = document.getElementById('redScoreText');
+    const blueScoreText = document.getElementById('blueScoreText');
+    const exitPillBtn = document.getElementById('exitPillBtn');
+    const menuModal = document.getElementById('menuModal');
+    const mode2PBtn = document.getElementById('mode2PBtn');
+    const modeAIBtn = document.getElementById('modeAIBtn');
+    const ruleBounceBtn = document.getElementById('ruleBounceBtn');
+    const ruleSuddenBtn = document.getElementById('ruleSuddenBtn');
+    const ruleDesc = document.getElementById('ruleDesc');
+    const resetMatchBtn = document.getElementById('resetMatchBtn');
+    const resumeBtn = document.getElementById('resumeBtn');
+    const roundToast = document.getElementById('roundToast');
+    const roundToastBox = document.getElementById('roundToastBox');
+    const roundToastTitle = document.getElementById('roundToastTitle');
+    const roundToastSub = document.getElementById('roundToastSub');
+    const topHint = document.getElementById('topHint');
+    const bottomHint = document.getElementById('bottomHint');
+    const soundToggleBtn = document.getElementById('soundToggleBtn');
+    const soundOnIcon = document.getElementById('soundOnIcon');
+    const soundOffIcon = document.getElementById('soundOffIcon');
+    const quickSkinBtn = document.getElementById('quickSkinBtn');
+    const quickSkinLabel = document.getElementById('quickSkinLabel');
+    const menuSkinName = document.getElementById('menuSkinName');
+    const skinPreviewCanvas = document.getElementById('skinPreviewCanvas');
+    const skinButtons = document.querySelectorAll('.skin-select-btn');
+
+    // Available Custom Sword Designs
+    const SWORD_SKINS = [
+        { id: 'royal', short: 'ROYAL', name: 'Royal Broadsword' },
+        { id: 'kunai', short: 'KUNAI', name: 'Shadow Kunai' },
+        { id: 'cyber', short: 'CYBER', name: 'Cyber Katana' },
+        { id: 'viking', short: 'VIKING', name: 'Viking Rune Dagger' },
+        { id: 'bowie', short: 'BOWIE', name: 'Classic Bowie' }
+    ];
+
+    // Exact Reference Color Palette
+    const COLORS = {
+        bg: '#2B4C65',
+        outline: '#0D1117',
+        logBark: '#964B29',
+        logLight: '#FFF394',
+        logMed: '#A96138',
+        logCenter: '#9E582F',
+        blueHandle: '#19A7CE',
+        blueGlow: '#7CF6FF',
+        blueParticle: '#19A7CE',
+        redHandle: '#EB5353',
+        redGlow: '#FF9E9E',
+        redParticle: '#EB5353',
+        greyHandle: '#8E9AA0',
+        greyGlow: '#D0DCE5',
+        bladeLight: '#F4F8FA',
+        bladeMid: '#D3DEE6',
+        bladeShadow: '#9EB0BD',
+        goldLight: '#FFE57F',
+        goldDark: '#DCA028',
+        gunmetal: '#3A4750',
+        hitGreen: '#4CD964'
+    };
+
+    // Web Audio Synthesizer for Crisp Sound Effects
+    class SoundFX {
+        constructor() {
+            this.ctx = null;
+            this.muted = false;
+        }
+        init() {
+            if (!this.ctx) {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (AudioCtx) this.ctx = new AudioCtx();
+            }
+            if (this.ctx && this.ctx.state === 'suspended') {
+                this.ctx.resume();
+            }
+        }
+        whoosh() {
+            if (this.muted) return;
+            this.init();
+            if (!this.ctx) return;
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(280, now);
+            osc.frequency.exponentialRampToValueAtTime(90, now + 0.09);
+            gain.gain.setValueAtTime(0.14, now);
+            gain.gain.linearRampToValueAtTime(0.01, now + 0.09);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.09);
+        }
+        woodHit() {
+            if (this.muted) return;
+            this.init();
+            if (!this.ctx) return;
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(165, now);
+            osc.frequency.exponentialRampToValueAtTime(52, now + 0.11);
+            gain.gain.setValueAtTime(0.38, now);
+            gain.gain.exponentialRampToValueAtTime(0.008, now + 0.11);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.11);
+        }
+        metalClang() {
+            if (this.muted) return;
+            this.init();
+            if (!this.ctx) return;
+            const now = this.ctx.currentTime;
+            [920, 1380, 2150].forEach((freq, idx) => {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = idx % 2 === 0 ? 'square' : 'sawtooth';
+                osc.frequency.setValueAtTime(freq, now);
+                osc.frequency.exponentialRampToValueAtTime(freq * 0.75, now + 0.22);
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.22);
+            });
+        }
+        roundWin() {
+            if (this.muted) return;
+            this.init();
+            if (!this.ctx) return;
+            const now = this.ctx.currentTime;
+            const notes = [440, 554.37, 659.25, 880];
+            notes.forEach((f, i) => {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(f, now + i * 0.07);
+                gain.gain.setValueAtTime(0.22, now + i * 0.07);
+                gain.gain.exponentialRampToValueAtTime(0.008, now + i * 0.07 + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now + i * 0.07);
+                osc.stop(now + i * 0.07 + 0.25);
+            });
+        }
+    }
+
+    const sfx = new SoundFX();
+
+    // Game State & Configuration
+    const TOTAL_SWORDS = 7;
+    let width = 420;
+    let height = 780;
+    let scale = 1;
+
+    const state = {
+        skinIndex: 0, // 0 = Royal Broadsword (New Default)
+        vsAI: false,
+        suddenDeath: false, // false = Race to 7 (bounce penalty), true = Sudden Death on collision
+        paused: false,
+        roundOver: false,
+        scores: {
+            red: 0,   // Initialized to 0 • 0 for a fresh match
+            blue: 0
+        },
+        wheel: {
+            x: 0,
+            y: 0,
+            radius: 96,
+            angle: 0,
+            angularVel: 0.032,
+            targetVel: 0.038,
+            patternTimer: 0,
+            shakeX: 0,
+            shakeY: 0,
+            pulse: 0,
+            notches: [-2.15, -0.15, 0.35, 1.38] // V-notch angles on the bark rim
+        },
+        embedded: [],    // { angle, type: 'grey'|'blue'|'red', hitAnim: 1 }
+        flying: [],      // Active flying or deflecting knives
+        particles: [],   // Colored circular droplets & wood chips
+        players: {
+            blue: {
+                hits: 0,
+                ready: true,
+                cooldown: 0,
+                spawnOffset: 0,
+                aiCooldown: 0.55
+            },
+            red: {
+                hits: 0,
+                ready: true,
+                cooldown: 0,
+                spawnOffset: 0
+            }
+        },
+        throwsCount: 0
+    };
+
+    function updateScoreUI() {
+        if (redScoreText) redScoreText.textContent = state.scores.red;
+        if (blueScoreText) blueScoreText.textContent = state.scores.blue;
+    }
+
+    // Initialize or Reset a Round
+    function startNewRound() {
+        state.roundOver = false;
+        state.flying = [];
+        state.particles = [];
+
+        // Reset player round trackers
+        state.players.blue.hits = 0;
+        state.players.blue.ready = true;
+        state.players.blue.cooldown = 0;
+        state.players.blue.spawnOffset = 0;
+        state.players.blue.aiCooldown = 0.45;
+
+        state.players.red.hits = 0;
+        state.players.red.ready = true;
+        state.players.red.cooldown = 0;
+        state.players.red.spawnOffset = 0;
+
+        // Spawn 2 neutral grey obstacle knives on opposite/asymmetric sides like the reference image
+        const baseAngle = Math.random() * Math.PI * 2;
+        const secondOffset = Math.PI * (0.68 + Math.random() * 0.64); // Well-spaced
+        state.embedded = [
+            { angle: normalizeAngle(baseAngle), type: 'grey', hitAnim: 0 },
+            { angle: normalizeAngle(baseAngle + secondOffset), type: 'grey', hitAnim: 0 }
+        ];
+
+        // Randomize initial spin direction
+        const dir = Math.random() < 0.5 ? 1 : -1;
+        state.wheel.angularVel = 0.032 * dir;
+        state.wheel.targetVel = 0.036 * dir;
+        state.wheel.patternTimer = 2.0;
+
+        roundToast.classList.remove('opacity-100', 'scale-100');
+        roundToast.classList.add('opacity-0', 'scale-75');
+    }
+
+    function normalizeAngle(a) {
+        a = a % (Math.PI * 2);
+        if (a < 0) a += Math.PI * 2;
+        return a;
+    }
+
+    function shortestAngleDist(a, b) {
+        let diff = (b - a) % (Math.PI * 2);
+        if (diff < -Math.PI) diff += Math.PI * 2;
+        if (diff > Math.PI) diff -= Math.PI * 2;
+        return Math.abs(diff);
+    }
+
+    // Resize canvas crisply for Retina/mobile screens
+    function resizeCanvas() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        width = rect.width;
+        height = rect.height;
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        // Compute responsive scale relative to a 420x780 reference layout
+        scale = Math.min(width / 410, height / 760);
+        state.wheel.x = width / 2;
+        state.wheel.y = height / 2;
+        state.wheel.radius = 96 * scale;
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+
+    // Spawn a burst of round droplets (matching the cyan/red droplets in the screenshot)
+    function spawnHitParticles(x, y, color, dirY) {
+        for (let i = 0; i < 10; i++) {
+            const angle = (dirY > 0 ? -Math.PI / 2 : Math.PI / 2) + (Math.random() - 0.5) * 1.6;
+            const speed = (1.5 + Math.random() * 3.8) * scale;
+            state.particles.push({
+                x: x + (Math.random() - 0.5) * 14 * scale,
+                y: y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                radius: (3 + Math.random() * 3.5) * scale,
+                color: i < 7 ? color : COLORS.logLight,
+                alpha: 0.9,
+                life: 0.35 + Math.random() * 0.25
+            });
+        }
+    }
+
+    function spawnClashSparks(x, y) {
+        for (let i = 0; i < 14; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = (2.5 + Math.random() * 5.5) * scale;
+            state.particles.push({
+                x,
+                y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                radius: (2.5 + Math.random() * 3) * scale,
+                color: i % 2 === 0 ? '#FFF394' : '#FFFFFF',
+                alpha: 1,
+                life: 0.28 + Math.random() * 0.2
+            });
+        }
+    }
+
+    // Trigger a sword throw for 'blue' (top) or 'red' (bottom)
+    function throwSword(playerKey) {
+        if (state.paused || state.roundOver) return;
+        const p = state.players[playerKey];
+        if (!p.ready || p.hits >= TOTAL_SWORDS) return;
+
+        // Prevent multiple simultaneous in-flight swords from the same player
+        const alreadyFlying = state.flying.some(k => k.owner === playerKey && !k.bounced);
+        if (alreadyFlying) return;
+
+        p.ready = false;
+        sfx.whoosh();
+
+        state.throwsCount++;
+        if (state.throwsCount >= 2) {
+            topHint.style.opacity = '0';
+            bottomHint.style.opacity = '0';
+        }
+
+        const isBlue = playerKey === 'blue';
+        const startY = isBlue ? 98 * scale : height - 98 * scale;
+        const vy = isBlue ? 25 * scale : -25 * scale;
+
+        state.flying.push({
+            owner: playerKey,
+            x: state.wheel.x,
+            y: startY,
+            vx: 0,
+            vy: vy,
+            rotation: isBlue ? Math.PI : 0, // 0 points UP, PI points DOWN
+            vRot: 0,
+            bounced: false
+        });
+    }
+
+    // Declare Round Winner
+    function finishRound(winnerKey, reasonText) {
+        if (state.roundOver) return;
+        state.roundOver = true;
+        sfx.roundWin();
+
+        state.scores[winnerKey]++;
+        updateScoreUI();
+
+        const isRed = winnerKey === 'red';
+        
+        // Check if player reached 5 match points to win the entire match!
+        if (state.scores[winnerKey] >= 5) {
+            roundToastTitle.textContent = isRed ? 'RED WINS THE MATCH! 👑' : 'BLUE WINS THE MATCH! 👑';
+            roundToastTitle.style.color = isRed ? COLORS.redHandle : COLORS.blueHandle;
+            roundToastSub.textContent = `First to 5 points! Final Score: Red ${state.scores.red} • Blue ${state.scores.blue}`;
+            roundToastBox.style.backgroundColor = '#FFF394';
+
+            roundToast.classList.remove('opacity-0', 'scale-75');
+            roundToast.classList.add('opacity-100', 'scale-100');
+
+            setTimeout(() => {
+                roundToast.classList.remove('opacity-100', 'scale-100');
+                roundToast.classList.add('opacity-0', 'scale-75');
+                toggleMenu(true); // Open menu so players can start a new match or adjust settings
+            }, 2200);
+            return;
+        }
+
+        roundToastTitle.textContent = isRed ? 'RED WINS ROUND!' : 'BLUE WINS ROUND!';
+        roundToastTitle.style.color = isRed ? COLORS.redHandle : COLORS.blueHandle;
+        roundToastSub.textContent = `${reasonText} (${state.scores.red} • ${state.scores.blue})`;
+        roundToastBox.style.backgroundColor = '#FFFFFF';
+
+        roundToast.classList.remove('opacity-0', 'scale-75');
+        roundToast.classList.add('opacity-100', 'scale-100');
+
+        setTimeout(() => {
+            startNewRound();
+        }, 1650);
+    }
+
+    // Smart AI Decision Logic for Top Blue Player
+    function updateAI(dt) {
+        if (!state.vsAI || state.roundOver || state.paused) return;
+        const blue = state.players.blue;
+        if (!blue.ready || blue.hits >= TOTAL_SWORDS) return;
+
+        blue.aiCooldown -= dt;
+        if (blue.aiCooldown > 0) return;
+
+        // Calculate time for Blue sword to travel from top spawn to top edge of log
+        const startY = 98 * scale;
+        const impactTipY = state.wheel.y - state.wheel.radius;
+        const tipOffset = 46 * scale; // Distance from sword center to blade tip
+        const travelDist = Math.max(10, (impactTipY - tipOffset) - startY);
+        const speedPerSec = 25 * scale * 60;
+        const flightTime = travelDist / speedPerSec;
+
+        // Predict wheel angle at impact
+        const predictedWheelAngle = state.wheel.angle + (state.wheel.angularVel * 60) * flightTime;
+        // Top of wheel in world angle is -Math.PI / 2 (or 3*PI/2)
+        const targetLocalAngle = normalizeAngle(-Math.PI / 2 - predictedWheelAngle);
+
+        // Check angular clearance against all embedded knives
+        const minSafeAngle = 0.25;
+        let isClear = true;
+        for (const k of state.embedded) {
+            if (shortestAngleDist(targetLocalAngle, k.angle) < minSafeAngle) {
+                isClear = false;
+                break;
+            }
+        }
+
+        if (isClear) {
+            throwSword('blue');
+            blue.aiCooldown = 0.34 + Math.random() * 0.25;
+        } else {
+            blue.aiCooldown = 0.05; // Re-evaluate shortly
+        }
+    }
+
+    // Main Physics Update
+    function update(dt) {
+        if (state.paused) return;
+
+        // 1. Update Wheel Rotation Pattern (Smooth acceleration, deceleration, & reversals)
+        const w = state.wheel;
+        w.patternTimer -= dt;
+        if (w.patternTimer <= 0) {
+            w.patternTimer = 1.6 + Math.random() * 2.2;
+            const roll = Math.random();
+            if (roll < 0.25) {
+                // Reverse spin direction
+                w.targetVel = -Math.sign(w.targetVel || 1) * (0.028 + Math.random() * 0.032);
+            } else if (roll < 0.55) {
+                // Fast spin burst
+                w.targetVel = Math.sign(w.targetVel || 1) * (0.048 + Math.random() * 0.02);
+            } else {
+                // Steady moderate cruise
+                w.targetVel = Math.sign(w.targetVel || 1) * (0.022 + Math.random() * 0.02);
+            }
+        }
+
+        w.angularVel += (w.targetVel - w.angularVel) * Math.min(1, dt * 3.2);
+        w.angle = normalizeAngle(w.angle + w.angularVel * (dt * 60));
+
+        // Dampen wheel shake & pulse
+        w.shakeX *= Math.pow(0.001, dt);
+        w.shakeY *= Math.pow(0.001, dt);
+        w.pulse *= Math.pow(0.01, dt);
+
+        // Animate newly embedded sword recoil
+        for (const k of state.embedded) {
+            if (k.hitAnim > 0) {
+                k.hitAnim = Math.max(0, k.hitAnim - dt * 6);
+            }
+        }
+
+        // Update player reload cooldowns
+        ['blue', 'red'].forEach(key => {
+            const p = state.players[key];
+            if (!p.ready && p.hits < TOTAL_SWORDS) {
+                const hasActiveFlight = state.flying.some(f => f.owner === key && !f.bounced);
+                if (!hasActiveFlight) {
+                    p.cooldown -= dt;
+                    if (p.cooldown <= 0) {
+                        p.ready = true;
+                        p.spawnOffset = 1; // Pop-in animation
+                    }
+                }
+            }
+            if (p.spawnOffset > 0) {
+                p.spawnOffset = Math.max(0, p.spawnOffset - dt * 6);
+            }
+        });
+
+        // Update AI if enabled
+        updateAI(dt);
+
+        // 2. Update Flying Swords
+        const tipOffset = 46 * scale;
+        const collisionThreshold = 0.195; // Angular width of handle/blade collision (~11.2 degrees)
+
+        for (let i = state.flying.length - 1; i >= 0; i--) {
+            const f = state.flying[i];
+            f.x += f.vx * (dt * 60);
+            f.y += f.vy * (dt * 60);
+            f.rotation += f.vRot * (dt * 60);
+
+            if (f.bounced) {
+                f.vy += 0.45 * scale * (dt * 60); // Gravity on deflected blade
+                if (f.y < -150 || f.y > height + 150 || f.x < -150 || f.x > width + 150) {
+                    state.flying.splice(i, 1);
+                }
+                continue;
+            }
+
+            const isBlue = f.owner === 'blue';
+            const tipY = isBlue ? f.y + tipOffset : f.y - tipOffset;
+            const targetEdgeY = isBlue ? (w.y - w.radius) : (w.y + w.radius);
+
+            const reachedTarget = isBlue ? (tipY >= targetEdgeY) : (tipY <= targetEdgeY);
+
+            if (reachedTarget && !state.roundOver) {
+                // World angle where sword hits the wheel
+                // Top is -PI/2 (270 deg), Bottom is +PI/2 (90 deg)
+                const worldImpactAngle = isBlue ? -Math.PI / 2 : Math.PI / 2;
+                const localImpactAngle = normalizeAngle(worldImpactAngle - w.angle);
+
+                // Check if another knife is occupying this angle
+                let hitExisting = false;
+                for (const existing of state.embedded) {
+                    if (shortestAngleDist(localImpactAngle, existing.angle) < collisionThreshold) {
+                        hitExisting = true;
+                        break;
+                    }
+                }
+
+                if (hitExisting) {
+                    // CLANG! Blade hit another sword handle
+                    sfx.metalClang();
+                    f.bounced = true;
+                    f.vx = (Math.random() < 0.5 ? -1 : 1) * (4 + Math.random() * 4) * scale;
+                    f.vy = isBlue ? -7 * scale : 7 * scale;
+                    f.vRot = (Math.random() < 0.5 ? -1 : 1) * 0.24;
+
+                    spawnClashSparks(w.x, targetEdgeY);
+                    w.shakeX = (Math.random() - 0.5) * 10 * scale;
+                    w.shakeY = (Math.random() - 0.5) * 10 * scale;
+
+                    if (state.suddenDeath) {
+                        const otherPlayer = isBlue ? 'red' : 'blue';
+                        finishRound(otherPlayer, `${isBlue ? 'Blue' : 'Red'} hit another sword!`);
+                    } else {
+                        // Brief penalty cooldown before next sword spawns
+                        state.players[f.owner].cooldown = 0.42;
+                    }
+                } else {
+                    // SUCCESSFUL EMBED!
+                    sfx.woodHit();
+                    state.embedded.push({
+                        angle: localImpactAngle,
+                        type: f.owner,
+                        hitAnim: 1.0
+                    });
+
+                    // Remove flying knife
+                    state.flying.splice(i, 1);
+
+                    // Visual feedback on wheel
+                    w.shakeY = (isBlue ? 6 : -6) * scale;
+                    w.pulse = 1.0;
+                    const pColor = isBlue ? COLORS.blueParticle : COLORS.redParticle;
+                    spawnHitParticles(w.x, targetEdgeY, pColor, isBlue ? 1 : -1);
+
+                    // Advance player hit count
+                    const playerObj = state.players[f.owner];
+                    playerObj.hits++;
+                    playerObj.cooldown = 0.08; // Crisp fast reload
+
+                    if (playerObj.hits >= TOTAL_SWORDS) {
+                        finishRound(f.owner, `All ${TOTAL_SWORDS} swords landed!`);
+                    }
+                }
+            }
+        }
+
+        // 3. Update Particles
+        for (let i = state.particles.length - 1; i >= 0; i--) {
+            const p = state.particles[i];
+            p.x += p.vx * (dt * 60);
+            p.y += p.vy * (dt * 60);
+            p.life -= dt;
+            if (p.life <= 0) {
+                state.particles.splice(i, 1);
+            }
+        }
+    }
+
+    // ============================================================================
+    // DRAWING FUNCTIONS (5 Custom Sword Skins + Wooden Log Target)
+    // ============================================================================
+
+    function getAccentColors(handleColor) {
+        if (handleColor === COLORS.blueHandle) {
+            return { main: COLORS.blueHandle, glow: COLORS.blueGlow, dark: '#0D6A87', guard: COLORS.goldLight, guardShadow: COLORS.goldDark };
+        }
+        if (handleColor === COLORS.redHandle) {
+            return { main: COLORS.redHandle, glow: COLORS.redGlow, dark: '#A32626', guard: COLORS.goldLight, guardShadow: COLORS.goldDark };
+        }
+        return { main: COLORS.greyHandle, glow: COLORS.greyGlow, dark: '#566168', guard: '#CBD5E1', guardShadow: '#94A3B8' };
+    }
+
+    /**
+     * Skin 0: ROYAL BROADSWORD (New Default)
+     * Diamond-faceted knight blade with fuller groove, winged gold crossguard,
+     * diagonal leather grip ridges, and faceted gemstone pommel.
+     */
+    function drawRoyalBroadsword(ctx, colors) {
+        const lineW = 3.8;
+        ctx.lineWidth = lineW;
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = COLORS.outline;
+
+        // 1. DOUBLE-EDGED DIAMOND BLADE
+        ctx.beginPath();
+        ctx.moveTo(-7.5, 5);
+        ctx.lineTo(-10, -29);
+        ctx.lineTo(0, -50); // Gleaming sharp point
+        ctx.lineTo(10, -29);
+        ctx.lineTo(7.5, 5);
+        ctx.closePath();
+        ctx.fillStyle = COLORS.bladeLight;
+        ctx.fill();
+
+        // Right-side steel bevel shadow
+        ctx.save();
+        ctx.clip();
+        ctx.fillStyle = COLORS.bladeShadow;
+        ctx.beginPath();
+        ctx.moveTo(0, -50);
+        ctx.lineTo(12, -50);
+        ctx.lineTo(12, 6);
+        ctx.lineTo(0, 6);
+        ctx.closePath();
+        ctx.fill();
+
+        // Bright diagonal sheen reflection
+        ctx.fillStyle = 'rgba(255,255,255,0.65)';
+        ctx.beginPath();
+        ctx.moveTo(-11, -18);
+        ctx.lineTo(11, -30);
+        ctx.lineTo(11, -24);
+        ctx.lineTo(-11, -12);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        // Re-stroke outer blade
+        ctx.stroke();
+
+        // Central ridge & fuller (blood groove)
+        ctx.beginPath();
+        ctx.moveTo(0, -48);
+        ctx.lineTo(0, -25);
+        ctx.strokeStyle = COLORS.outline;
+        ctx.lineWidth = 2.0;
+        ctx.stroke();
+
+        ctx.beginPath();
+        if (ctx.roundRect) {
+            ctx.roundRect(-2.4, -25, 4.8, 25, 2.4);
+        } else {
+            ctx.rect(-2.4, -25, 4.8, 25);
+        }
+        ctx.fillStyle = colors.dark;
+        ctx.fill();
+        ctx.lineWidth = 2.4;
+        ctx.strokeStyle = COLORS.outline;
+        ctx.stroke();
+
+        // 2. WRAPPED HILT GRIP WITH DIAGONAL RIDGES
+        ctx.lineWidth = lineW;
+        ctx.fillStyle = colors.main;
+        ctx.beginPath();
+        if (ctx.roundRect) {
+            ctx.roundRect(-6.5, 9, 13, 24, 4);
+        } else {
+            ctx.rect(-6.5, 9, 13, 24);
+        }
+        ctx.fill();
+
+        // Diagonal grip wraps & vertical shine inside hilt clip
+        ctx.save();
+        ctx.clip();
+        ctx.fillStyle = 'rgba(255,255,255,0.25)';
+        ctx.fillRect(-5.5, 9, 4, 24);
+        ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+        ctx.lineWidth = 2.4;
+        for (let y = 13; y <= 29; y += 5.5) {
+            ctx.beginPath();
+            ctx.moveTo(-8, y);
+            ctx.lineTo(8, y + 3.5);
+            ctx.stroke();
+        }
+        ctx.restore();
+
+        // Hilt outline
+        ctx.lineWidth = lineW;
+        ctx.strokeStyle = COLORS.outline;
+        ctx.stroke();
+
+        // 3. SWEPT WINGED ROYAL CROSSGUARD
+        ctx.beginPath();
+        ctx.moveTo(-19, 1.5);
+        ctx.quadraticCurveTo(-10, 4.5, 0, 2);
+        ctx.quadraticCurveTo(10, 4.5, 19, 1.5);
+        ctx.lineTo(16.5, 10.5);
+        ctx.quadraticCurveTo(8, 11.5, 0, 13.5);
+        ctx.quadraticCurveTo(-8, 11.5, -16.5, 10.5);
+        ctx.closePath();
+        ctx.fillStyle = colors.guard;
+        ctx.fill();
+        ctx.stroke();
+
+        // Center gem embedded in crossguard
+        ctx.beginPath();
+        ctx.moveTo(0, 3.5);
+        ctx.lineTo(4, 7.8);
+        ctx.lineTo(0, 12);
+        ctx.lineTo(-4, 7.8);
+        ctx.closePath();
+        ctx.fillStyle = colors.glow;
+        ctx.fill();
+        ctx.lineWidth = 2.2;
+        ctx.stroke();
+
+        // 4. FACETED GEMSTONE POMMEL
+        ctx.lineWidth = lineW;
+        ctx.beginPath();
+        ctx.arc(0, 37.5, 7.8, 0, Math.PI * 2);
+        ctx.fillStyle = colors.guard;
+        ctx.fill();
+        ctx.stroke();
+
+        // Glowing inner jewel in pommel
+        ctx.beginPath();
+        ctx.arc(0, 37.5, 4.2, 0, Math.PI * 2);
+        ctx.fillStyle = colors.main;
+        ctx.fill();
+        ctx.lineWidth = 2.2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath();
+        ctx.arc(-1.4, 36.2, 1.4, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    /**
+     * Skin 1: SHADOW KUNAI / NINJA BLADE
+     * Leaf-diamond throwing kunai with tactical cutout, bandage wrap, and finger-ring pommel.
+     */
+    function drawShadowKunai(ctx, colors) {
+        const lineW = 3.8;
+        ctx.lineWidth = lineW;
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = COLORS.outline;
+
+        // 1. LEAF-DIAMOND KUNAI BLADE
+        ctx.beginPath();
+        ctx.moveTo(0, -50);     // Needle point
+        ctx.lineTo(13.5, -15);  // Wide right wing
+        ctx.lineTo(5.5, 6);     // Right base
+        ctx.lineTo(-5.5, 6);    // Left base
+        ctx.lineTo(-13.5, -15); // Wide left wing
+        ctx.closePath();
+        ctx.fillStyle = COLORS.bladeLight;
+        ctx.fill();
+
+        // Dark tactical bevel on right half
+        ctx.save();
+        ctx.clip();
+        ctx.fillStyle = '#6A7B88';
+        ctx.fillRect(0, -50, 15, 60);
+        ctx.restore();
+        ctx.stroke();
+
+        // Tactical diamond cutout in the center of the blade
+        ctx.beginPath();
+        ctx.moveTo(0, -31);
+        ctx.lineTo(4.8, -16);
+        ctx.lineTo(0, -6);
+        ctx.lineTo(-4.8, -16);
+        ctx.closePath();
+        ctx.fillStyle = COLORS.bg;
+        ctx.fill();
+        ctx.lineWidth = 3.0;
+        ctx.stroke();
+
+        // 2. COMPACT BOLSTER COLLAR
+        ctx.lineWidth = lineW;
+        ctx.fillStyle = COLORS.gunmetal;
+        ctx.beginPath();
+        if (ctx.roundRect) {
+            ctx.roundRect(-8.5, 4.5, 17, 6.5, 3);
+        } else {
+            ctx.rect(-8.5, 4.5, 17, 6.5);
+        }
+        ctx.fill();
+        ctx.stroke();
+
+        // 3. WRAPPEDSHINOBI CLOTH HILT
+        ctx.fillStyle = colors.main;
+        ctx.beginPath();
+        if (ctx.roundRect) {
+            ctx.roundRect(-5.2, 11, 10.4, 20, 3);
+        } else {
+            ctx.rect(-5.2, 11, 10.4, 20);
+        }
+        ctx.fill();
+        ctx.stroke();
+
+        // Crisscross bandage lines
+        ctx.lineWidth = 2.2;
+        for (let y = 14; y <= 26; y += 5.5) {
+            ctx.beginPath();
+            ctx.moveTo(-5, y);
+            ctx.lineTo(5, y + 3);
+            ctx.moveTo(5, y);
+            ctx.lineTo(-5, y + 3);
+            ctx.stroke();
+        }
+
+        // 4. ICONIC FINGER-RING POMMEL
+        ctx.lineWidth = lineW;
+        ctx.beginPath();
+        ctx.arc(0, 38, 8.2, 0, Math.PI * 2);
+        ctx.fillStyle = COLORS.bladeMid;
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(0, 38, 3.8, 0, Math.PI * 2);
+        ctx.fillStyle = COLORS.bg;
+        ctx.fill();
+        ctx.lineWidth = 2.8;
+        ctx.stroke();
+    }
+
+    /**
+     * Skin 2: CYBER KATANA / PLASMA BLADE
+     * Sci-fi angular katana with glowing team-colored neon plasma edge and tech hilt.
+     */
+    function drawCyberKatana(ctx, colors) {
+        const lineW = 3.8;
+        ctx.lineWidth = lineW;
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = COLORS.outline;
+
+        // 1. ANGULAR CYBER BLADE
+        ctx.beginPath();
+        ctx.moveTo(-7.5, 5);
+        ctx.lineTo(-7.5, -36);
+        ctx.lineTo(0, -50); // Chisel katana tip
+        ctx.lineTo(8.5, -26);
+        ctx.lineTo(8.5, 5);
+        ctx.closePath();
+        ctx.fillStyle = '#263238'; // Carbon dark core
+        ctx.fill();
+
+        // Glowing neon plasma cutting edge
+        ctx.save();
+        ctx.clip();
+        ctx.fillStyle = colors.main;
+        ctx.beginPath();
+        ctx.moveTo(-2, -50);
+        ctx.lineTo(10, -50);
+        ctx.lineTo(10, 6);
+        ctx.lineTo(2, 6);
+        ctx.closePath();
+        ctx.fill();
+
+        // Bright plasma core stripe
+        ctx.fillStyle = colors.glow;
+        ctx.fillRect(3.8, -46, 3, 52);
+        ctx.restore();
+        ctx.stroke();
+
+        // glowing circuit vents on blade
+        ctx.strokeStyle = colors.glow;
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(-3.2, -8);
+        ctx.lineTo(-3.2, -28);
+        ctx.stroke();
+
+        // 2. HEXAGONAL TECH HANDGUARD
+        ctx.lineWidth = lineW;
+        ctx.strokeStyle = COLORS.outline;
+        ctx.fillStyle = COLORS.gunmetal;
+        ctx.beginPath();
+        ctx.moveTo(-16, 4.5);
+        ctx.lineTo(16, 4.5);
+        ctx.lineTo(13, 12);
+        ctx.lineTo(-13, 12);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Glowing LED bar in handguard
+        ctx.fillStyle = colors.glow;
+        ctx.fillRect(-8, 7, 16, 2.5);
+
+        // 3. SEGMENTED CARBON HILT
+        ctx.fillStyle = '#1E272C';
+        ctx.beginPath();
+        if (ctx.roundRect) {
+            ctx.roundRect(-6.8, 12, 13.6, 28, 4);
+        } else {
+            ctx.rect(-6.8, 12, 13.6, 28);
+        }
+        ctx.fill();
+        ctx.stroke();
+
+        // Glowing team energy cells inside hilt
+        for (let y = 16; y <= 32; y += 7) {
+            ctx.fillStyle = colors.main;
+            ctx.beginPath();
+            if (ctx.roundRect) {
+                ctx.roundRect(-4, y, 8, 4, 1.5);
+            } else {
+                ctx.rect(-4, y, 8, 4);
+            }
+            ctx.fill();
+        }
+    }
+
+    /**
+     * Skin 3: VIKING RUNE DAGGER
+     * Broad Nordic blade with etched glowing runes, horned crossguard, and braided hilt.
+     */
+    function drawVikingDagger(ctx, colors) {
+        const lineW = 3.8;
+        ctx.lineWidth = lineW;
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = COLORS.outline;
+
+        // 1. BROAD NORDIC BLADE WITH BARB NOTCHES
+        ctx.beginPath();
+        ctx.moveTo(-9, 5);
+        ctx.lineTo(-11.5, -14);
+        ctx.lineTo(-8.5, -17); // Left barb notch
+        ctx.lineTo(-11, -31);
+        ctx.lineTo(0, -49);    // Heavy Cleaver Tip
+        ctx.lineTo(11, -31);
+        ctx.lineTo(8.5, -17);  // Right barb notch
+        ctx.lineTo(11.5, -14);
+        ctx.lineTo(9, 5);
+        ctx.closePath();
+        ctx.fillStyle = COLORS.bladeLight;
+        ctx.fill();
+
+        ctx.save();
+        ctx.clip();
+        ctx.fillStyle = COLORS.bladeShadow;
+        ctx.fillRect(0, -50, 14, 56);
+        ctx.restore();
+        ctx.stroke();
+
+        // Glowing Nordic runes down the center
+        ctx.strokeStyle = colors.main;
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        // Rune 1
+        ctx.moveTo(0, -35);
+        ctx.lineTo(0, -24);
+        ctx.moveTo(0, -33);
+        ctx.lineTo(3.5, -29);
+        ctx.lineTo(0, -26);
+        // Rune 2
+        ctx.moveTo(0, -19);
+        ctx.lineTo(0, -7);
+        ctx.moveTo(-3.5, -16);
+        ctx.lineTo(3.5, -10);
+        ctx.stroke();
+
+        // 2. HORNED VIKING CROSSGUARD
+        ctx.lineWidth = lineW;
+        ctx.strokeStyle = COLORS.outline;
+        ctx.fillStyle = colors.guardShadow;
+        ctx.beginPath();
+        ctx.moveTo(-18, -1);
+        ctx.quadraticCurveTo(-9, 6, 0, 5);
+        ctx.quadraticCurveTo(9, 6, 18, -1);
+        ctx.lineTo(15, 11);
+        ctx.quadraticCurveTo(0, 14, -15, 11);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // 3. BRAIDED HILT & LOBED VIKING POMMEL
+        ctx.fillStyle = colors.main;
+        ctx.beginPath();
+        if (ctx.roundRect) {
+            ctx.roundRect(-7, 11, 14, 22, 4);
+        } else {
+            ctx.rect(-7, 11, 14, 22);
+        }
+        ctx.fill();
+        ctx.stroke();
+
+        // Gold bands on grip
+        ctx.fillStyle = colors.guard;
+        ctx.fillRect(-7, 19, 14, 5);
+        ctx.strokeRect(-7, 19, 14, 5);
+
+        // Trilobed Viking pommel cap
+        ctx.beginPath();
+        ctx.moveTo(-12, 33);
+        ctx.lineTo(12, 33);
+        ctx.quadraticCurveTo(10, 43, 0, 43);
+        ctx.quadraticCurveTo(-10, 43, -12, 33);
+        ctx.closePath();
+        ctx.fillStyle = colors.guardShadow;
+        ctx.fill();
+        ctx.stroke();
+    }
+
+    /**
+     * Skin 4: CLASSIC BOWIE (Original Reference Knife)
+     */
+    function drawClassicBowie(ctx, handleColor) {
+        const lineW = 4.2;
+        ctx.lineWidth = lineW;
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = COLORS.outline;
+
+        // 1. SILVER CLIP-POINT BLADE
+        ctx.beginPath();
+        ctx.moveTo(-8, 6);
+        ctx.lineTo(-9.5, -24);
+        ctx.quadraticCurveTo(-8.5, -39, 0, -49);
+        ctx.quadraticCurveTo(3.5, -35, 9.5, -21);
+        ctx.lineTo(8, 6);
+        ctx.closePath();
+        ctx.fillStyle = COLORS.bladeLight;
+        ctx.fill();
+
+        ctx.save();
+        ctx.clip();
+        ctx.fillStyle = COLORS.bladeShadow;
+        ctx.fillRect(0, -49, 12, 57);
+        ctx.restore();
+        ctx.stroke();
+
+        // 2. POMMEL / HANDLE GRIP
+        ctx.fillStyle = handleColor;
+        ctx.beginPath();
+        if (ctx.roundRect) {
+            ctx.roundRect(-8.5, 13, 17, 29, [4, 4, 9, 9]);
+        } else {
+            ctx.rect(-8.5, 13, 17, 29);
+        }
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(255,255,255,0.22)';
+        ctx.beginPath();
+        if (ctx.roundRect) {
+            ctx.roundRect(-4.5, 16, 4, 21, 2);
+        }
+        ctx.fill();
+
+        // 3. CROSSGUARD PILL
+        ctx.fillStyle = handleColor;
+        ctx.beginPath();
+        if (ctx.roundRect) {
+            ctx.roundRect(-16, 5, 32, 10, 5);
+        } else {
+            ctx.rect(-16, 5, 32, 10);
+        }
+        ctx.fill();
+        ctx.stroke();
+    }
+
+    /**
+     * Master Sword Renderer: Draws the currently selected sword design centered at (0,0) pointing UPWARD (-Y).
+     */
+    function drawCartoonSword(ctx, handleColor, scaleFactor = 1, overrideSkinIndex = null) {
+        ctx.save();
+        ctx.scale(scaleFactor, scaleFactor);
+
+        const activeSkin = overrideSkinIndex !== null ? overrideSkinIndex : state.skinIndex;
+        const colors = getAccentColors(handleColor);
+
+        switch (activeSkin) {
+            case 0:
+                drawRoyalBroadsword(ctx, colors);
+                break;
+            case 1:
+                drawShadowKunai(ctx, colors);
+                break;
+            case 2:
+                drawCyberKatana(ctx, colors);
+                break;
+            case 3:
+                drawVikingDagger(ctx, colors);
+                break;
+            case 4:
+            default:
+                drawClassicBowie(ctx, handleColor);
+                break;
+        }
+
+        ctx.restore();
+    }
+
+    /**
+     * Draws the central wooden log target with concentric rings and bark notches.
+     */
+    function drawWoodenLog(ctx, x, y, radius, angle) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(angle);
+
+        // 1. Thick Outer Bark Circle with Black Cartoon Outline
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, 0, Math.PI * 2);
+        ctx.fillStyle = COLORS.logBark;
+        ctx.fill();
+        ctx.lineWidth = 5.5 * scale;
+        ctx.strokeStyle = COLORS.outline;
+        ctx.stroke();
+
+        // 2. Concentric Wood Rings (Alternating light yellow #FFF394 and warm brown #9E582F)
+        const rings = [
+            { r: 0.80, color: COLORS.logLight },
+            { r: 0.65, color: COLORS.logMed },
+            { r: 0.51, color: COLORS.logLight },
+            { r: 0.37, color: COLORS.logMed },
+            { r: 0.25, color: COLORS.logLight },
+            { r: 0.14, color: COLORS.logCenter }
+        ];
+
+        for (const ring of rings) {
+            ctx.beginPath();
+            ctx.arc(0, 0, radius * ring.r, 0, Math.PI * 2);
+            ctx.fillStyle = ring.color;
+            ctx.fill();
+        }
+
+        // 3. Small V-Notches on the Bark & Ring Edges (Matches Reference Image details)
+        ctx.strokeStyle = COLORS.outline;
+        ctx.lineWidth = 3 * scale;
+        ctx.lineJoin = 'round';
+
+        for (const notchAngle of state.wheel.notches) {
+            ctx.save();
+            ctx.rotate(notchAngle);
+            // Small dark V-cut on outer bark
+            ctx.beginPath();
+            ctx.moveTo(radius - 1 * scale, -4.5 * scale);
+            ctx.lineTo(radius - 8 * scale, 0);
+            ctx.lineTo(radius - 1 * scale, 4.5 * scale);
+            ctx.stroke();
+
+            // Inner bark notch line on yellow ring boundary
+            const innerR = radius * 0.80;
+            ctx.beginPath();
+            ctx.moveTo(innerR - 4 * scale, -3.5 * scale);
+            ctx.lineTo(innerR + 5 * scale, 0);
+            ctx.lineTo(innerR - 4 * scale, 3.5 * scale);
+            ctx.fillStyle = COLORS.logBark;
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        ctx.restore();
+    }
+
+    /**
+     * Draws the 7 circular hit/ammo indicator dots in top-right (Blue) and bottom-left (Red).
+     * Matches reference image exact layout & green hit states!
+     */
+    function drawAmmoTrackers(ctx) {
+        const dotRadius = 5.5 * scale;
+        const dotSpacing = 22.5 * scale;
+        const marginX = 33 * scale;
+
+        // --- TOP RIGHT: BLUE PLAYER (7 dots) ---
+        // In the reference image, landed hits turn green (#4CD964) from the bottom of the top-right stack upward,
+        // while remaining ammo stays cyan-blue (#19A7CE) with a thicker black outline.
+        const blueStartX = width - marginX;
+        const blueTopY = 56 * scale;
+        const blueRemaining = TOTAL_SWORDS - state.players.blue.hits;
+
+        for (let i = 0; i < TOTAL_SWORDS; i++) {
+            const y = blueTopY + i * dotSpacing;
+            const isRemainingAmmo = i < blueRemaining;
+
+            ctx.beginPath();
+            ctx.arc(blueStartX, y, dotRadius, 0, Math.PI * 2);
+            if (isRemainingAmmo) {
+                ctx.fillStyle = COLORS.blueHandle;
+                ctx.fill();
+                ctx.lineWidth = 3 * scale;
+                ctx.strokeStyle = COLORS.outline;
+                ctx.stroke();
+            } else {
+                // Landed sword -> bright green dot with subtle dark rim
+                ctx.fillStyle = COLORS.hitGreen;
+                ctx.fill();
+                ctx.lineWidth = 2.2 * scale;
+                ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+                ctx.stroke();
+            }
+        }
+
+        // --- BOTTOM LEFT: RED PLAYER (7 dots) ---
+        // In the reference image, landed hits turn green (#4CD964) from the top of the bottom-left stack downward,
+        // while remaining ammo stays coral-red (#EB5353) with a thick black outline.
+        const redStartX = marginX;
+        const redBottomY = height - 56 * scale;
+        const redHits = state.players.red.hits;
+
+        for (let i = 0; i < TOTAL_SWORDS; i++) {
+            // i=0 is top of the bottom-left stack, i=6 is bottom-most dot
+            const y = (redBottomY - (TOTAL_SWORDS - 1) * dotSpacing) + i * dotSpacing;
+            const isLandedHit = i < redHits;
+
+            ctx.beginPath();
+            ctx.arc(redStartX, y, dotRadius, 0, Math.PI * 2);
+            if (isLandedHit) {
+                ctx.fillStyle = COLORS.hitGreen;
+                ctx.fill();
+                ctx.lineWidth = 2.2 * scale;
+                ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+                ctx.stroke();
+            } else {
+                ctx.fillStyle = COLORS.redHandle;
+                ctx.fill();
+                ctx.lineWidth = 3 * scale;
+                ctx.strokeStyle = COLORS.outline;
+                ctx.stroke();
+            }
+        }
+    }
+
+    function render() {
+        ctx.clearRect(0, 0, width, height);
+
+        const w = state.wheel;
+        const cx = w.x + w.shakeX;
+        const cy = w.y + w.shakeY;
+        const logRadius = w.radius + w.pulse * 3 * scale;
+
+        // 1. Draw Embedded Swords (Rendered BEFORE the log so their tips sit cleanly inside the log)
+        for (const item of state.embedded) {
+            const worldAngle = w.angle + item.angle;
+            // Slight impact push-in animation when newly embedded
+            const embedDist = logRadius + (4 - item.hitAnim * 5) * scale;
+
+            const kx = cx + Math.cos(worldAngle) * embedDist;
+            const ky = cy + Math.sin(worldAngle) * embedDist;
+
+            let handleColor = COLORS.greyHandle;
+            if (item.type === 'blue') handleColor = COLORS.blueHandle;
+            if (item.type === 'red') handleColor = COLORS.redHandle;
+
+            ctx.save();
+            ctx.translate(kx, ky);
+            // Point the blade inward toward the center of the wheel
+            ctx.rotate(worldAngle - Math.PI / 2);
+            drawCartoonSword(ctx, handleColor, scale);
+            ctx.restore();
+        }
+
+        // 2. Draw Rotating Wooden Log Target
+        drawWoodenLog(ctx, cx, cy, logRadius, w.angle);
+
+        // 3. Draw Flying / Bouncing Swords
+        for (const f of state.flying) {
+            const handleColor = f.owner === 'blue' ? COLORS.blueHandle : COLORS.redHandle;
+            ctx.save();
+            ctx.translate(f.x, f.y);
+            ctx.rotate(f.rotation);
+            drawCartoonSword(ctx, handleColor, scale);
+            ctx.restore();
+        }
+
+        // 4. Draw Ready Swords at Top (Blue) and Bottom (Red) Spawn Positions
+        const blueP = state.players.blue;
+        if (blueP.ready && blueP.hits < TOTAL_SWORDS && !state.roundOver) {
+            const popY = (98 - blueP.spawnOffset * 18) * scale;
+            ctx.save();
+            ctx.translate(w.x, popY);
+            ctx.rotate(Math.PI); // Point downward
+            drawCartoonSword(ctx, COLORS.blueHandle, scale);
+            ctx.restore();
+        }
+
+        const redP = state.players.red;
+        if (redP.ready && redP.hits < TOTAL_SWORDS && !state.roundOver) {
+            const popY = height - (98 - redP.spawnOffset * 18) * scale;
+            ctx.save();
+            ctx.translate(w.x, popY);
+            ctx.rotate(0); // Point upward
+            drawCartoonSword(ctx, COLORS.redHandle, scale);
+            ctx.restore();
+        }
+
+        // 5. Draw Particles (Droplets & Wood Chips)
+        for (const p of state.particles) {
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, Math.min(1, p.life * 2.5));
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        // 6. Draw Top-Right and Bottom-Left Ammo / Hit Trackers
+        drawAmmoTrackers(ctx);
+    }
+
+    // ============================================================================
+    // INPUT HANDLING (Touch Split-Screen, Mouse, & Keyboard)
+    // ============================================================================
+
+    function handlePointerTrigger(clientY) {
+        if (state.paused || state.roundOver) return;
+        const rect = canvas.getBoundingClientRect();
+        const relY = clientY - rect.top;
+
+        if (relY < rect.height / 2) {
+            // Top half tapped -> Blue throws (unless AI is controlling Blue)
+            if (!state.vsAI) {
+                throwSword('blue');
+            } else {
+                // If playing vs AI, tapping anywhere throws Red for convenience!
+                throwSword('red');
+            }
+        } else {
+            // Bottom half tapped -> Red throws
+            throwSword('red');
+        }
+    }
+
+    // Multi-touch support so both players can tap simultaneously on phone/tablet
+    canvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            handlePointerTrigger(e.changedTouches[i].clientY);
+        }
+    }, { passive: false });
+
+    canvas.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;
+        handlePointerTrigger(e.clientY);
+    });
+
+    // Laptop Keyboard Controls
+    window.addEventListener('keydown', (e) => {
+        if (e.repeat) return;
+        if (e.code === 'Escape') {
+            toggleMenu();
+            return;
+        }
+        if (state.paused || state.roundOver) return;
+
+        // Red Player (Bottom): Space, Up Arrow, S
+        if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyS') {
+            e.preventDefault();
+            throwSword('red');
+        }
+        // Blue Player (Top): Enter, Down Arrow, W
+        if (e.code === 'Enter' || e.code === 'ArrowDown' || e.code === 'KeyW') {
+            e.preventDefault();
+            if (!state.vsAI) {
+                throwSword('blue');
+            }
+        }
+    });
+
+    // ============================================================================
+    // MENU & UI CONTROLS
+    // ============================================================================
+
+    function renderSkinPreview() {
+        if (!skinPreviewCanvas) return;
+        const pCtx = skinPreviewCanvas.getContext('2d');
+        const w = skinPreviewCanvas.width;
+        const h = skinPreviewCanvas.height;
+        pCtx.clearRect(0, 0, w, h);
+
+        // Draw Blue and Red preview swords side-by-side horizontally
+        pCtx.save();
+        pCtx.translate(w * 0.28, h * 0.5);
+        pCtx.rotate(Math.PI / 2);
+        drawCartoonSword(pCtx, COLORS.blueHandle, 0.72, state.skinIndex);
+        pCtx.restore();
+
+        pCtx.save();
+        pCtx.translate(w * 0.72, h * 0.5);
+        pCtx.rotate(-Math.PI / 2);
+        drawCartoonSword(pCtx, COLORS.redHandle, 0.72, state.skinIndex);
+        pCtx.restore();
+    }
+
+    function setSwordSkin(index) {
+        state.skinIndex = ((index % SWORD_SKINS.length) + SWORD_SKINS.length) % SWORD_SKINS.length;
+        const skin = SWORD_SKINS[state.skinIndex];
+        quickSkinLabel.textContent = skin.short;
+        menuSkinName.textContent = skin.name;
+
+        skinButtons.forEach((btn, idx) => {
+            if (idx === state.skinIndex) {
+                btn.className = 'skin-select-btn cartoon-btn py-1.5 rounded-xl font-extrabold text-[10px] bg-[#FFF394] text-black';
+            } else {
+                btn.className = 'skin-select-btn cartoon-btn py-1.5 rounded-xl font-extrabold text-[10px] bg-slate-700 text-slate-200';
+            }
+        });
+
+        renderSkinPreview();
+    }
+
+    function updateMenuButtonsUI() {
+        setSwordSkin(state.skinIndex);
+
+        // Player Mode
+        if (state.vsAI) {
+            modeAIBtn.className = 'cartoon-btn py-2.5 px-3 rounded-xl font-extrabold text-sm bg-[#19A7CE] text-white';
+            mode2PBtn.className = 'cartoon-btn py-2.5 px-3 rounded-xl font-extrabold text-sm bg-slate-700 text-slate-200';
+            topHint.textContent = 'BLUE: SMART BOT (AI)';
+        } else {
+            mode2PBtn.className = 'cartoon-btn py-2.5 px-3 rounded-xl font-extrabold text-sm bg-[#19A7CE] text-white';
+            modeAIBtn.className = 'cartoon-btn py-2.5 px-3 rounded-xl font-extrabold text-sm bg-slate-700 text-slate-200';
+            topHint.textContent = 'BLUE: TAP TOP HALF • [DOWN / W]';
+        }
+
+        // Collision Rule
+        if (state.suddenDeath) {
+            ruleSuddenBtn.className = 'cartoon-btn py-2 px-2 rounded-xl font-extrabold text-xs bg-[#EB5353] text-white';
+            ruleBounceBtn.className = 'cartoon-btn py-2 px-2 rounded-xl font-extrabold text-xs bg-slate-700 text-slate-200';
+            ruleDesc.textContent = 'Hitting an existing blade immediately awards the round point to your opponent!';
+        } else {
+            ruleBounceBtn.className = 'cartoon-btn py-2 px-2 rounded-xl font-extrabold text-xs bg-[#4CD964] text-black';
+            ruleSuddenBtn.className = 'cartoon-btn py-2 px-2 rounded-xl font-extrabold text-xs bg-slate-700 text-slate-200';
+            ruleDesc.textContent = 'Clashing a blade bounces off with a brief reload delay. First to stick 7 wins!';
+        }
+    }
+
+    function toggleMenu(forceOpen) {
+        const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : menuModal.classList.contains('hidden');
+        if (shouldOpen) {
+            state.paused = true;
+            updateMenuButtonsUI();
+            menuModal.classList.remove('hidden');
+        } else {
+            state.paused = false;
+            menuModal.classList.add('hidden');
+        }
+    }
+
+    exitPillBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleMenu(true);
+    });
+
+    resumeBtn.addEventListener('click', () => {
+        toggleMenu(false);
+    });
+
+    resetMatchBtn.addEventListener('click', () => {
+        state.scores.red = 0;
+        state.scores.blue = 0;
+        updateScoreUI();
+        startNewRound();
+        toggleMenu(false);
+    });
+
+    mode2PBtn.addEventListener('click', () => {
+        state.vsAI = false;
+        updateMenuButtonsUI();
+    });
+
+    modeAIBtn.addEventListener('click', () => {
+        state.vsAI = true;
+        updateMenuButtonsUI();
+    });
+
+    ruleBounceBtn.addEventListener('click', () => {
+        state.suddenDeath = false;
+        updateMenuButtonsUI();
+    });
+
+    ruleSuddenBtn.addEventListener('click', () => {
+        state.suddenDeath = true;
+        updateMenuButtonsUI();
+    });
+
+    soundToggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        sfx.muted = !sfx.muted;
+        soundOnIcon.classList.toggle('hidden', sfx.muted);
+        soundOffIcon.classList.toggle('hidden', !sfx.muted);
+    });
+
+    // Quick on-screen sword design switcher
+    quickSkinBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        sfx.whoosh();
+        setSwordSkin(state.skinIndex + 1);
+    });
+
+    // Menu sword skin buttons
+    skinButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const idx = parseInt(btn.getAttribute('data-skin'), 10);
+            sfx.whoosh();
+            setSwordSkin(idx);
+        });
+    });
+
+    // ============================================================================
+    // MAIN GAME LOOP
+    // ============================================================================
+    let lastTime = performance.now();
+
+    function gameLoop(now) {
+        const dt = Math.min(0.05, (now - lastTime) / 1000);
+        lastTime = now;
+
+        update(dt);
+        render();
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    window.onload = () => {
+        resizeCanvas();
+        updateScoreUI();
+        setSwordSkin(0);
+        startNewRound();
+        requestAnimationFrame(gameLoop);
+    };
+})();
+</script>
+</body>
+</html>
